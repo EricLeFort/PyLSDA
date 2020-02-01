@@ -1,7 +1,14 @@
 *.DS_Store
 *.jpg
 
+# Caffe implementation files
 lsda-caffe/data
 lsda-caffe/external
 lsda-caffe/selective_search/SelectiveSearchCodeIJCV
 lsda-caffe/vis
+
+# Python Environment
+*/bin
+*/include
+*/lib
+*.json
