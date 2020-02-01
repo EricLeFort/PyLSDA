@@ -1,0 +1,7 @@
+*.DS_Store
+*.jpg
+
+lsda-caffe/data
+lsda-caffe/external
+lsda-caffe/selective_search/SelectiveSearchCodeIJCV
+lsda-caffe/vis
