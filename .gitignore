@@ -8,11 +8,15 @@ lsda-caffe/selective_search/SelectiveSearchCodeIJCV
 lsda-caffe/vis
 
 # Python Environment
-*/bin
-*/include
-*/lib
-*/share
+bin
+include
+lib
+share
 *.json
+__pycache__
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Misc
+data
