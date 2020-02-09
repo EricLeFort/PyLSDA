@@ -82,6 +82,7 @@ def features(img, boxes, model):
         idx += batch_size
 
     print("Done")
+    return feat
 
 def img_crop(img, box, model):
     """
