@@ -54,15 +54,34 @@ def features(img, boxes, model):
         The resulting features
     """
     print("Extract regions... ", end="")
-    batches, padding = extract_regions(img, boxes, model)
+    batches, batch_padding = extract_regions(img, boxes, model)
     batch_size = model.cnn.batch_size
     print("Done.")
 
     # Compute features for each batch of region images
     print("Computing features... ", end="")
-    #TODO
+    feat_dim = -1
+    feat = []
+    idx = 1
+    for i, batch in enumerate(batches):
+        x = model.forward(batch)[0]
+
+        # First batch, init values
+        if i == 0:
+            feat_dim = x.shape[0] / batch_size
+            feat = np.zeros(len(boxes), feat_dim, dtype="float32")
+
+        x = x.reshape((feat_dim, batch_size))
+
+        # Last batch, trim x to size
+        if i == len(batches) - 1:
+            if batch_padding > 0:
+                x = x[:, :x.shape[1] - batch_padding]
+
+        feat[idx:idx+x.shape[1], :] = x
+        idx += batch_size
+
     print("Done")
-    pass
 
 def img_crop(img, box, model):
     """
