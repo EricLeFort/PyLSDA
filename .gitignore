@@ -5,7 +5,6 @@
 lsda-caffe/data
 lsda-caffe/external
 lsda-caffe/selective_search/SelectiveSearchCodeIJCV
-lsda-caffe/vis
 
 # Python Environment
 bin
