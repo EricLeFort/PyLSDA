@@ -86,15 +86,12 @@ def features(img, boxes, model):
 
 def img_crop(img, box, model):
     """
-
+    Crops an image according to the model's settings
     Args:
         img (ndarray): The image
         box (Box): The (x1, y1, x2, y2) box
-        model ():
+        model (Model): The model to use
     """
-    #mode = model.detectors.crop_mode
-    #img_mean = model.cnn.image_mean
-    #padding = model.detectors.crop_padding
     size = model.cnn.image_mean.shape[0]
 
     # Default values if padding is 0
