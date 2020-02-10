@@ -167,7 +167,7 @@ def lX_to_fcX(feat, precomp_layer, layer, model):
         layer (int):
         model (Model): The model to use
     """
-    for i in range(precomp_layer+1:layer):
+    for i in range(precomp_layer+1, layer):
         feat = feat*model.layers[i].weights[0] + model.layers[i].weights[1]
         if i < len(model.layers):
             feat = max(0, feat)
