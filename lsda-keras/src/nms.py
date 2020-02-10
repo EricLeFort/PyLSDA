@@ -11,7 +11,7 @@ def non_max_suppression(scored_boxes, overlap):
         boxes (list of (Box, score)): The scored boxes
         max_overlap (number): The maximum allowed overlap
     Returns:
-        -
+        The selections
     """
     if not scored_boxes:
         return []
