@@ -1,4 +1,4 @@
-def non_max_suppression(scored_boxes, overlap):
+def non_max_suppression(scored_boxes, max_overlap):
     """
     Greedily select high-scoring detections and skip detections that are significantly covered by
     a previously selected detection.
@@ -22,10 +22,10 @@ def non_max_suppression(scored_boxes, overlap):
     decorated_boxes = [(box, score, i) for i, (box, score) in enumerate(scored_boxes)]
     decorated_boxes.sort(key=lambda x: x[1])
 
-    pick = [0]*len(boxes)
+    pick = [0]*len(scored_boxes)
     counter = 1
     while decorated_boxes:
-        i = decorated_boxes[-1][1]
+        i = decorated_boxes[-1][2]
         pick[counter] = i
         counter += 1
 
@@ -38,11 +38,11 @@ def non_max_suppression(scored_boxes, overlap):
         # Compute the amount of overlap between this box and the others
         intersect = width * height
         overlaps = [intersect / (areas[i] + area - intersect)
-                    for area in areas[[idx for _, _, idx in decorated_boxes]]]
+                    for area in [areas[idx] for _, _, idx in decorated_boxes]]
 
         # Filter out any boxes which overlap too much
-        decorated_boxes = [(box, i)
-                           for (box, _, i), overlap in zip(decorated_boxes, overlaps)
+        decorated_boxes = [(box, score, i)
+                           for (box, score, i), overlap in zip(decorated_boxes[:-1], overlaps[:-1])
                            if overlap <= max_overlap]
-    
+
     return pick[:counter]

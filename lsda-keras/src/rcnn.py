@@ -23,20 +23,21 @@ def extract_regions(img, boxes, model):
                 (batch x box x channel x width x height)
             batch_padding: The padding for the batch
     """
-    num_batches = ceil(len(boxes) / model.cnn.batch_size)
-    batch_padding = model.cnn.batch_size - len(boxes) % model.cnn.batch_size
+    num_batches = ceil(len(boxes) / model.cnn["batch_size"])
+    batch_padding = model.cnn["batch_size"] - len(boxes) % model.cnn["batch_size"]
+    batch_padding = batch_padding if batch_padding != model.cnn["batch_size"] else 0
 
     # Allocate memory up-front
-    target_size = model.cnn.image_mean.shape[0]
+    target_size = model.layers[0].input_shape[1]
     batches = np.ndarray(
-        (num_batches, model.cnn.batch_size, 3, crop_size, crop_size),
+        (num_batches, model.cnn["batch_size"], target_size, target_size, 3),
         dtype="float32"
     )
 
     # Create the batches
     for i, _ in enumerate(batches):
-        start = (i-1)*model.cnn.batch_size + 1
-        end = min(len(boxes), start+model.cnn.batch_size-1)
+        start = i*model.cnn["batch_size"]
+        end = min(len(boxes), start+model.cnn["batch_size"])
         for j, box in enumerate(boxes[start:end]):
             batches[i, j, :, :, :] = img_crop(img, box, model)
 
@@ -55,31 +56,23 @@ def features(img, boxes, model):
     """
     print("Extract regions... ", end="")
     batches, batch_padding = extract_regions(img, boxes, model)
-    batch_size = model.cnn.batch_size
     print("Done.")
 
     # Compute features for each batch of region images
     print("Computing features... ", end="")
     feat_dim = -1
-    feat = []
-    idx = 1
+    feat = np.zeros((len(boxes), model.layers[-1].output_shape[1]), dtype="float32")
+    idx = 0
     for i, batch in enumerate(batches):
-        x = model.forward(batch)[0]
-
-        # First batch, init values
-        if i == 0:
-            feat_dim = x.shape[0] / batch_size
-            feat = np.zeros(len(boxes), feat_dim, dtype="float32")
-
-        x = x.reshape((feat_dim, batch_size))
+        x = model.predict(batch, batch_size=model.cnn["batch_size"])
 
         # Last batch, trim x to size
         if i == len(batches) - 1:
             if batch_padding > 0:
-                x = x[:, :x.shape[1] - batch_padding]
+                x = x[:x.shape[0] - batch_padding, :]
 
-        feat[idx:idx+x.shape[1], :] = x
-        idx += batch_size
+        feat[idx:idx+x.shape[0], :] = x
+        idx += x.shape[0]
 
     print("Done")
     return feat
@@ -92,20 +85,20 @@ def img_crop(img, box, model):
         box (Box): The (x1, y1, x2, y2) box
         model (Model): The model to use
     """
-    size = model.cnn.image_mean.shape[0]
+    size = model.layers[0].input_shape[1]
 
     # Default values if padding is 0
     pad_x, pad_y = 0, 0
     crop_width, crop_height = size, size
 
     # Determine padding if necessary
-    if padding > 0 or mode.detectors.crop_mode == "square":
-        scale = size / (size - 2*model.detectors.crop_padding)
+    if model.detectors["crop_padding"] > 0 or model.detectors["crop_mode"] == "square":
+        scale = size / (size - 2*model.detectors["crop_padding"])
         half_height, half_width = (box[3] - box[1] + 1) / 2, (box[2] - box[0] + 1) / 2
-        center = round((box[0] + half_width, box[1] + half_height))
+        center = (round(box[0] + half_width), round(box[1] + half_height))
 
         # Square off using the large dimension
-        if mode.detectors.crop_mode == "square":
+        if model.detectors["crop_mode"] == "square":
             half_height = max(half_height, half_width)
             half_width = half_height
 
@@ -113,10 +106,10 @@ def img_crop(img, box, model):
         half_height *= scale
         half_width *= scale
         box = (
-            center - half_width,
-            center - half_height,
-            center + half_width,
-            center + half_height
+            int(center[0] - half_width),
+            int(center[1] - half_height),
+            int(center[0] + half_width),
+            int(center[1] + half_height)
         )
 
         org_width, org_height = box[2] - box[0], box[3] - box[1]
@@ -143,17 +136,17 @@ def img_crop(img, box, model):
             crop_height = size - pad_y
 
     # Grab the region of the image we're interested in
-    window = img[:, box[0]:box[2], box[1]:box[3]]
+    window = img[box[0]:box[2], box[1]:box[3], :]
 
     # resize image, order=1 means "bilinear", the goal is to match what the model is doing
-    tmp = resize(window, (crop_height, crop_width), order=1, anti_aliasing=False)
+    tmp = resize(window, (crop_width, crop_height), order=1, anti_aliasing=False)
 
     # Subtract image mean
-    if model.cnn.image_mean:
-        tmp -= model.cnn.image_mean[:, pad_x:pad_x+crop_width, pad_y:pad_y+crop_height]
+    if "image_mean" in model.cnn and model.cnn["image_mean"]:
+        tmp -= model.cnn["image_mean"][pad_x:pad_x+crop_width, pad_y:pad_y+crop_height, :]
 
-    window = np.zeros((3, size, size), dtype="float32")
-    window[:, pad_x:pad_x+crop_width, pad_y:pad_y+crop_height] = tmp
+    window = np.zeros((size, size, 3), dtype="float32")
+    window[pad_x:pad_x+crop_width, pad_y:pad_y+crop_height, :] = tmp
     return window
 
 def lX_to_fcX(feat, precomp_layer, layer, model):
@@ -171,6 +164,8 @@ def lX_to_fcX(feat, precomp_layer, layer, model):
         feat = feat*model.layers[i].weights[0] + model.layers[i].weights[1]
         if i < len(model.layers):
             feat = max(0, feat)
+
+    return feat
 
 def pool5_to_fcX(feat, layer, model):
     """
@@ -335,4 +330,14 @@ def load_model(filepath):
     """
     model = _create_model()
     _load_weights(model, filepath)
+
+    # Add metadata
+    model.cnn = {
+        "batch_size": 32
+    }
+    model.detectors = {
+        "crop_mode": "square",
+        "crop_padding": 0
+    }
+    model.feat_norm_mean = 1
     return model
