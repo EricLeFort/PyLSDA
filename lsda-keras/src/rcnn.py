@@ -60,7 +60,6 @@ def features(img, boxes, model):
 
     # Compute features for each batch of region images
     print("Computing features... ", end="")
-    feat_dim = -1
     feat = np.zeros((len(boxes), model.layers[-1].output_shape[1]), dtype="float32")
     idx = 0
     for i, batch in enumerate(batches):

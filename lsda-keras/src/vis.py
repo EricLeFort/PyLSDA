@@ -21,7 +21,7 @@ def show_detections(img, boxes, ids):
 		# Add textbox to the plot
 		y_txt = min(img.shape[1] - 15, box[0][3] + 5)
 		ax.annotate(
-			"{}: {:.4f}".format(id_, box[1]),
+			"{}: {:.2f}".format(id_, box[1]),
 			(box[0][0], y_txt),
 			transform=ax.transAxes,
 			fontsize=12,
@@ -32,4 +32,3 @@ def show_detections(img, boxes, ids):
 			}
 		)
 	plt.show()
-	

@@ -22,27 +22,26 @@ def non_max_suppression(scored_boxes, max_overlap):
     decorated_boxes = [(box, score, i) for i, (box, score) in enumerate(scored_boxes)]
     decorated_boxes.sort(key=lambda x: x[1])
 
-    pick = [0]*len(scored_boxes)
     counter = 1
+    pick = []
     while decorated_boxes:
         i = decorated_boxes[-1][2]
-        pick[counter] = i
+        pick.append(i)
         counter += 1
 
-        x1 = max(scored_boxes[i][0][0], max(box[0] for box, _, _ in decorated_boxes))
-        y1 = max(scored_boxes[i][0][1], max(box[1] for box, _, _ in decorated_boxes))
-        x2 = max(scored_boxes[i][0][2], max(box[2] for box, _, _ in decorated_boxes))
-        y2 = max(scored_boxes[i][0][3], max(box[3] for box, _, _ in decorated_boxes))
-        width, height = max(0, x2-x1+1), max(0, y2-y1+1)
+        a = decorated_boxes[-1]
+        before = len(decorated_boxes)
+        decorated_boxes = [box
+                           for box in decorated_boxes[:-1]
+                           if compute_overlap(a, box) <= max_overlap]
 
-        # Compute the amount of overlap between this box and the others
-        intersect = width * height
-        overlaps = [intersect / (areas[i] + area - intersect)
-                    for area in [areas[idx] for _, _, idx in decorated_boxes]]
+    return pick
 
-        # Filter out any boxes which overlap too much
-        decorated_boxes = [(box, score, i)
-                           for (box, score, i), overlap in zip(decorated_boxes[:-1], overlaps[:-1])
-                           if overlap <= max_overlap]
+def compute_overlap(a, b):
+    area_a = (a[0][2]-a[0][0]+1) * (a[0][3]-a[0][1]+1)
+    area_b = (b[0][2]-b[0][0]+1) * (b[0][3]-b[0][1]+1)
 
-    return pick[:counter]
+    x_overlap = max(0, min(a[0][2], b[0][2]) - max(a[0][0], b[0][0])) + 1
+    y_overlap = max(0, min(a[0][3], b[0][3]) - max(a[0][1], b[0][1])) + 1
+    intersect = x_overlap * y_overlap
+    return intersect / (area_a + area_b - intersect)
